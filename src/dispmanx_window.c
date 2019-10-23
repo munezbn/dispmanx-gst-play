@@ -1,22 +1,24 @@
-/* GStreamer command line playback testing utility for raspberrypi
- *
- * Copyright (C) 2016 Munez BN <munezbn.dev@gmail.com>
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
- * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
- *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
- * Boston, MA 02110-1301, USA.
- */
+/* MIT License
+
+Copyright (c) 2016 Munez Bokkapatna Nayakwady <munezbn.dev@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE */
 
 #include <stdio.h>
 #include <string.h>
@@ -25,14 +27,15 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "dispmanx-gst-play.h"
+#include "player.h"
+#include "dispmanx_window.h"
 
 static dispmanx_display_t s_dispmanx;
 
-static void dispmanx_win_create_background(GstPlay *player_instance, int32_t layer, uint32_t bg_color);
+static void dispmanx_win_create_background(player_instance_t *player_instance, int32_t layer, uint32_t bg_color);
 static void dispmanx_win_add_background_element(dispmanx_background_t *bg, DISPMANX_DISPLAY_HANDLE_T display, DISPMANX_UPDATE_HANDLE_T update);
     
-static void dispmanx_win_create_background(GstPlay *player_instance, int32_t layer, uint32_t bg_color)
+static void dispmanx_win_create_background(player_instance_t *player_instance, int32_t layer, uint32_t bg_color)
 {
   uint32_t image_ptr;
   uint16_t color = (uint16_t)bg_color;
@@ -87,7 +90,7 @@ void dispmanx_win_show_background_element(dispmanx_background_t *bg, gboolean sh
   DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
   VC_RECT_T src_rect;
   VC_RECT_T dst_rect;
-  int8_t result = 0;
+  int result = 0;
 
   if(show == TRUE)
     bg->opacity = 255;
@@ -117,7 +120,7 @@ void dispmanx_win_show_background_element(dispmanx_background_t *bg, gboolean sh
 
 void dispmanx_win_destroy_background_element(dispmanx_background_t *bg)
 {
-  int8_t result = 0;
+  int result = 0;
 
   DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
   assert(update != 0); 
@@ -134,13 +137,13 @@ void dispmanx_win_destroy_background_element(dispmanx_background_t *bg)
   return;	
 }
 
-void dispmanx_win_move(player_video_window_t *vid_win, gint x, gint y)
+void dispmanx_win_move(dispmanx_window_t *vid_win, gint x, gint y)
 {
   DISPMANX_UPDATE_HANDLE_T update = 0;
   VC_RECT_T result_dest;
   gint new_x = 0;
   gint new_y = 0;
-  int8_t result = 0;
+  int result = 0;
   static int8_t first = 1;
     
   if(vid_win->in_fullscreen == TRUE)
@@ -182,8 +185,8 @@ void dispmanx_win_move(player_video_window_t *vid_win, gint x, gint y)
   
     vid_win->src_rect.x = 0;
     vid_win->src_rect.y = 0;
-    vid_win->src_rect.width = vid_win->vid_width << 16; 
-    vid_win->src_rect.height = vid_win->vid_height << 16;
+    vid_win->src_rect.width = (int32_t)vid_win->vid_width << 16; 
+    vid_win->src_rect.height = (int32_t)vid_win->vid_height << 16;
 
 
     I_LOG_INFO("Moving from %d %d %d %d ==> %d %d %d %d\n",
@@ -212,7 +215,7 @@ void dispmanx_win_move(player_video_window_t *vid_win, gint x, gint y)
   return;
 }
 
-void dispmanx_win_set_fullscreen(player_video_window_t *vid_win, gboolean fullscreen)
+void dispmanx_win_set_fullscreen(dispmanx_window_t *vid_win, gboolean fullscreen)
 {
   DISPMANX_UPDATE_HANDLE_T update = vc_dispmanx_update_start(0);
   int result = -1;
@@ -236,13 +239,13 @@ void dispmanx_win_set_fullscreen(player_video_window_t *vid_win, gboolean fullsc
       if (src_ratio > dst_ratio)
       {
         result_dest.width = s_dispmanx.info.width;
-        result_dest.height = s_dispmanx.info.width / src_ratio;
+        result_dest.height =(int32_t)(s_dispmanx.info.width / src_ratio);
         result_dest.x = 0;
         result_dest.y = (s_dispmanx.info.height - result_dest.height) / 2;
       }
       else if (src_ratio < dst_ratio)
       {
-        result_dest.width = s_dispmanx.info.height * src_ratio;
+        result_dest.width = (int32_t)(s_dispmanx.info.height * src_ratio);
         result_dest.height = s_dispmanx.info.height;
         result_dest.x = (s_dispmanx.info.width - result_dest.width) / 2;
         result_dest.y = 0;
@@ -261,18 +264,18 @@ void dispmanx_win_set_fullscreen(player_video_window_t *vid_win, gboolean fullsc
   }
   else /* Exit fullscreen , display with actual resolution at the center of the screen*/
   {
-    vid_win->dst_rect.x = (s_dispmanx.info.width - vid_win->vid_width) / 2 ;
-    vid_win->dst_rect.y = (s_dispmanx.info.height - vid_win->vid_height) / 2;
-    vid_win->dst_rect.width = vid_win->vid_width;
-    vid_win->dst_rect.height = vid_win->vid_height;
+    vid_win->dst_rect.x = (int32_t)(((guint)s_dispmanx.info.width - vid_win->vid_width) / 2) ;
+    vid_win->dst_rect.y = (int32_t)(((guint)s_dispmanx.info.height - vid_win->vid_height) / 2);
+    vid_win->dst_rect.width = (int32_t)vid_win->vid_width;
+    vid_win->dst_rect.height = (int32_t)vid_win->vid_height;
 
     vid_win->in_fullscreen = FALSE;
   }
 
   vid_win->src_rect.x = 0;
   vid_win->src_rect.y = 0;
-  vid_win->src_rect.width = vid_win->vid_width << 16; 
-  vid_win->src_rect.height = vid_win->vid_height << 16;
+  vid_win->src_rect.width = (int32_t)(vid_win->vid_width << 16); 
+  vid_win->src_rect.height = (int32_t)(vid_win->vid_height << 16);
   
 
   I_LOG_INFO("Scaling from %d %d %d %d ==> %d %d %d %d\n",
@@ -308,7 +311,8 @@ gboolean dispmanx_initialize_window_system()
 {
   gboolean status = FALSE;
 
-  uint32_t ret = -1, screen = 0;
+  uint32_t screen = 0;
+  int ret = -1;
 
   if( s_dispmanx.display > 0)
   {
@@ -333,7 +337,7 @@ safe_exit:
   return status;
 }
 
-void dispmanx_win_set_aspect_ratio(GstPlay *player_instance, dispmanx_player_aspect_ratio_e ar)
+void dispmanx_win_set_aspect_ratio(player_instance_t *player_instance, dispmanx_player_aspect_ratio_e ar)
 {
   I_LOG_TRACE("Key r Pressed Window is Ful%d\n", player_instance->vid_win.in_fullscreen);
 
@@ -356,7 +360,7 @@ safe_exit:
   return;
 }
 
-gboolean dispmanx_create_video_window(GstPlay *player_instance)
+gboolean dispmanx_create_video_window(player_instance_t *player_instance)
 {
   DISPMANX_UPDATE_HANDLE_T dispman_update;
   gboolean ret = FALSE;

@@ -1,0 +1,13 @@
+#################
+# Build Options #
+#################
+
+##############
+# Build Type #
+##############
+
+option('build-type',
+        type: 'string',
+        value: 'debug',
+        description: 'Choose the build type, suported options are debug and release'
+)
